@@ -1,14 +1,13 @@
+import PyPDF2
+from transformers import pipeline
+import transformers
 import PySimpleGUI as sg
 import os
-from PyPDF2 import PdfReader
 import spacy
 
 class FileBasedChatbot:
     def __init__(self, folder_path):
         self.folder_path = folder_path
-        self.extracted_text = self.extract_text_from_pdfs()
-        self.nlp = spacy.load("en_core_web_sm")
-        self.doc = self.nlp(self.extracted_text)
         self.create_window()
 
     def extract_text_from_pdfs(self):
@@ -16,23 +15,21 @@ class FileBasedChatbot:
         for filename in os.listdir(self.folder_path):
             if filename.endswith(".pdf"):
                 with open(os.path.join(self.folder_path, filename), 'rb') as file:
-                    pdf_reader = PdfReader(file)
+                    pdf_reader = PyPDF2.PdfReader(file)
                     for page in pdf_reader.pages:
                         extracted_text += page.extract_text()
                         print(extracted_text)
         return extracted_text
 
-    def process_user_input(self, user_input):
-        processed_user_input = self.nlp(user_input)
-        matches = []
-        for sentence in self.doc.sents:
-            if processed_user_input.text in sentence.text:
-                matches.append(sentence.text)
+    def summarize_text(self, text):
+        summarizer = pipeline("summarization",  model="T5-small", tokenizer="T5-small", framework="tf")
+        summary = summary = summarizer(text, max_length=100, min_length=30, do_sample=False)
+        return summary[0]['summary_text']
 
-        if matches:
-            return "Answer found: " + matches[0]
-        else:
-            return "Sorry, I couldn't find an answer related to your query."
+    def process_user_input(self, user_input):
+        extracted_text = self.extract_text_from_pdfs()
+        summarized_text = self.summarize_text(extracted_text)
+        return summarized_text
 
     def create_window(self):
         layout = [
@@ -45,6 +42,7 @@ class FileBasedChatbot:
         self.window.set_icon('icon\icons8-chat-bot-64.ico')
 
     def run(self):
+        
         while True:
             event, values = self.window.read()
 
@@ -56,6 +54,7 @@ class FileBasedChatbot:
 
                 print(f'User: {user_input}')
                 print(f'Chatbot: {chatbot_response}')
+                self.window['-OUTPUT-'].update(chatbot_response)
                 self.window['-IN-'].update('')  # Clear the input field after processing the input
 
         self.window.close()
