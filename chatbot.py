@@ -1,38 +1,37 @@
-import PyPDF2
-from transformers import pipeline
 import PySimpleGUI as sg
 import os
+from PyPDF2 import PdfReader
+import spacy
 
 class FileBasedChatbot:
     def __init__(self, folder_path):
         self.folder_path = folder_path
         self.extracted_text = self.extract_text_from_pdfs()
-        self.summarizer = pipeline("summarization")
+        self.nlp = spacy.load("en_core_web_sm")
         self.create_window()
-        self.display_chat()
 
     def extract_text_from_pdfs(self):
         extracted_text = ""
         for filename in os.listdir(self.folder_path):
             if filename.endswith(".pdf"):
                 with open(os.path.join(self.folder_path, filename), 'rb') as file:
-                    pdf_reader = PyPDF2.PdfReader(file)
+                    pdf_reader = PdfReader(file)
                     for page in pdf_reader.pages:
                         extracted_text += page.extract_text()
+                    print(extracted_text)
         return extracted_text
 
-    def summarize_text(self, text):
-        summary = self.summarizer(text, max_length=100, min_length=30, do_sample=False)
-        return summary[0]['summary_text']
-
-    def display_chat(self):
-        chat_text = self.extracted_text[:1000]  # Display the initial part of the extracted text
-        print(chat_text)
-        self.window['-OUTPUT-'].update(chat_text)
-
     def process_user_input(self, user_input):
-        summarized_text = self.summarize_text(user_input)
-        return summarized_text
+        processed_user_input = self.nlp(user_input)
+        matches = []
+        for sentence in self.nlp(self.extracted_text).sents:
+            if processed_user_input.text in sentence.text:
+                matches.append(sentence.text)
+
+        if matches:
+            return "Answer found: " + matches[0]
+        else:
+            return "Sorry, I couldn't find an answer related to your query."
 
     def create_window(self):
         layout = [
@@ -47,6 +46,7 @@ class FileBasedChatbot:
     def run(self):
         while True:
             event, values = self.window.read()
+
             if event == sg.WIN_CLOSED:
                 break
             elif event == 'Send' or (event == '-IN-' and values['-IN-'] == '\r'):
@@ -55,8 +55,7 @@ class FileBasedChatbot:
 
                 print(f'User: {user_input}')
                 print(f'Chatbot: {chatbot_response}')
-                self.window['-OUTPUT-'].update(chatbot_response)
-                self.window['-IN-'].update('')
+                self.window['-IN-'].update('')  # Clear the input field after processing the input
 
         self.window.close()
 
