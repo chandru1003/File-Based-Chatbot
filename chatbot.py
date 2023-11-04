@@ -1,7 +1,9 @@
 import PySimpleGUI as sg
+import pdfplumber
 import os
-from PyPDF2 import PdfReader
 import spacy
+from colorama import Fore ,Style
+
 
 class FileBasedChatbot:
     def __init__(self, folder_path):
@@ -14,22 +16,23 @@ class FileBasedChatbot:
         extracted_text = ""
         for filename in os.listdir(self.folder_path):
             if filename.endswith(".pdf"):
-                with open(os.path.join(self.folder_path, filename), 'rb') as file:
-                    pdf_reader = PdfReader(file)
-                    for page in pdf_reader.pages:
+                 with pdfplumber.open(os.path.join(self.folder_path, filename)) as pdf:
+                    for page in pdf.pages:
                         extracted_text += page.extract_text()
-                    print(extracted_text)
+        with open("extracted_text.txt", "w", encoding="utf-8") as text_file:
+            text_file.write(extracted_text)           
         return extracted_text
 
     def process_user_input(self, user_input):
-        processed_user_input = self.nlp(user_input)
         matches = []
-        for sentence in self.nlp(self.extracted_text).sents:
-            if processed_user_input.text in sentence.text:
-                matches.append(sentence.text)
+        for sentence in self.extracted_text.split('.'):
+            if user_input in sentence:
+                matches.append(sentence)
+        
+        nlp_matches = self.nlp(' '.join(matches))
 
         if matches:
-            return "Answer found: " + matches[0]
+            return "Answer found: " + str(nlp_matches)
         else:
             return "Sorry, I couldn't find an answer related to your query."
 
@@ -52,7 +55,14 @@ class FileBasedChatbot:
             elif event == 'Send' or (event == '-IN-' and values['-IN-'] == '\r'):
                 user_input = values['-IN-'].strip()
                 chatbot_response = self.process_user_input(user_input)
-
+                '''sg.Print('User: ', text_color='red')
+                sg.Print(user_input)
+                sg.Print('Chatbot: ', text_color='red')
+                sg.Print(chatbot_response) 
+                print(Fore.RED + 'User:')
+                print(f'{Fore.RED}User:{Style.RESET_ALL} {user_input}')
+                print(f'{Fore.RED}Chatbot:{Style.RESET_ALL} {chatbot_response}')'''
+                
                 print(f'User: {user_input}')
                 print(f'Chatbot: {chatbot_response}')
                 self.window['-IN-'].update('')  # Clear the input field after processing the input
