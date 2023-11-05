@@ -2,9 +2,7 @@ import PySimpleGUI as sg
 import pdfplumber
 import os
 import spacy
-from transformers import pipeline
-
-
+from transformers import pipeline ,set_seed ,GPT2LMHeadModel, GPT2Tokenizer
 
 class FileBasedChatbot:
     def __init__(self, folder_path):
@@ -24,6 +22,16 @@ class FileBasedChatbot:
             text_file.write(extracted_text)           
         return extracted_text
 
+    def generate_text_with_gpt2(self, combined_text):
+        model = GPT2LMHeadModel.from_pretrained("gpt2")
+        tokenizer = GPT2Tokenizer.from_pretrained("gpt2")
+
+        input_ids = tokenizer.encode(combined_text, return_tensors="pt")
+        output = model.generate(input_ids, max_length=100, num_return_sequences=1, no_repeat_ngram_size=2, repetition_penalty=1.5, top_p=0.92, temperature=0.85)
+
+        generated_text = tokenizer.decode(output[0], skip_special_tokens=True)
+        return generated_text
+
     def process_user_input(self, user_input):
         matches = []
         for sentence in self.extracted_text.split('.'):
@@ -31,12 +39,9 @@ class FileBasedChatbot:
                 matches.append(sentence)
 
         if matches:
-            gpt_model = pipeline("text-generation", model="gpt2")  
-            combined_text = ' '.join(matches)  # Combine related sentences for context
-
-            # Generate answer based on the context
-            generated_text = gpt_model(combined_text, max_length=50, num_return_sequences=1)
-            return "Answer found: " + generated_text[0]['generated_text']
+            combined_text = ' '.join(matches)
+            generated_text = self.generate_text_with_gpt2(combined_text)
+            return "Answer found: " + generated_text
         else:
             return "Sorry, I couldn't find an answer related to your query."
 
