@@ -2,7 +2,8 @@ import PySimpleGUI as sg
 import pdfplumber
 import os
 import spacy
-from colorama import Fore ,Style
+from transformers import pipeline
+
 
 
 class FileBasedChatbot:
@@ -28,11 +29,14 @@ class FileBasedChatbot:
         for sentence in self.extracted_text.split('.'):
             if user_input in sentence:
                 matches.append(sentence)
-        
-        nlp_matches = self.nlp(' '.join(matches))
 
         if matches:
-            return "Answer found: " + str(nlp_matches)
+            gpt_model = pipeline("text-generation", model="gpt2")  
+            combined_text = ' '.join(matches)  # Combine related sentences for context
+
+            # Generate answer based on the context
+            generated_text = gpt_model(combined_text, max_length=50, num_return_sequences=1)
+            return "Answer found: " + generated_text[0]['generated_text']
         else:
             return "Sorry, I couldn't find an answer related to your query."
 
@@ -54,16 +58,9 @@ class FileBasedChatbot:
                 break
             elif event == 'Send' or (event == '-IN-' and values['-IN-'] == '\r'):
                 user_input = values['-IN-'].strip()
-                chatbot_response = self.process_user_input(user_input)
-                '''sg.Print('User: ', text_color='red')
-                sg.Print(user_input)
-                sg.Print('Chatbot: ', text_color='red')
-                sg.Print(chatbot_response) 
-                print(Fore.RED + 'User:')
-                print(f'{Fore.RED}User:{Style.RESET_ALL} {user_input}')
-                print(f'{Fore.RED}Chatbot:{Style.RESET_ALL} {chatbot_response}')'''
                 
                 print(f'User: {user_input}')
+                chatbot_response = self.process_user_input(user_input)             
                 print(f'Chatbot: {chatbot_response}')
                 self.window['-IN-'].update('')  # Clear the input field after processing the input
 
