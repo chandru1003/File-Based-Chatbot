@@ -2,7 +2,7 @@ import PySimpleGUI as sg
 import pdfplumber
 import os
 import spacy
-from transformers import pipeline ,set_seed ,GPT2LMHeadModel, GPT2Tokenizer
+from transformers import GPT2LMHeadModel, GPT2Tokenizer
 
 class FileBasedChatbot:
     def __init__(self, folder_path):
@@ -23,15 +23,15 @@ class FileBasedChatbot:
         return extracted_text
 
     def generate_text_with_gpt2(self, combined_text):
-        model = GPT2LMHeadModel.from_pretrained("gpt2")
-        tokenizer = GPT2Tokenizer.from_pretrained("gpt2")
-
-        input_ids = tokenizer.encode(combined_text, return_tensors="pt")
-        output = model.generate(input_ids, max_length=100, num_return_sequences=1, no_repeat_ngram_size=2, repetition_penalty=1.5, top_p=0.92, temperature=0.85)
-
-        generated_text = tokenizer.decode(output[0], skip_special_tokens=True)
-        return generated_text
-
+        try:
+            input_ids = self.tokenizer.encode(combined_text, return_tensors="pt")
+            output = self.model.generate(input_ids, max_length=50, num_return_sequences=1)
+            generated_text = self.tokenizer.decode(output[0], skip_special_tokens=True)
+            return generated_text
+        except Exception as e:
+            print(f"An error occurred: {e}")
+            return ""
+       
     def process_user_input(self, user_input):
         matches = []
         for sentence in self.extracted_text.split('.'):
@@ -52,26 +52,36 @@ class FileBasedChatbot:
             [sg.Input(key='-IN-', size=(45, 1), enable_events=True), sg.Button('Send')],
         ]
 
-        self.window = sg.Window('File-Based Chatbot', layout)
+        self.window = sg.Window('File-Based Chatbot', layout,finalize=True)
         self.window.set_icon('icon\icons8-chat-bot-64.ico')
 
     def run(self):
         while True:
-            event, values = self.window.read()
+            try:
+                event, values = self.window.read()
 
-            if event == sg.WIN_CLOSED:
-                break
-            elif event == 'Send' or (event == '-IN-' and values['-IN-'] == '\r'):
-                user_input = values['-IN-'].strip()
-                
-                print(f'User: {user_input}')
-                chatbot_response = self.process_user_input(user_input)             
-                print(f'Chatbot: {chatbot_response}')
-                self.window['-IN-'].update('')  # Clear the input field after processing the input
+                if event == sg.WIN_CLOSED:
+                    break
+                elif event == 'Send' or (event == '-IN-' and values['-IN-'] == '\r'):
+                    user_input = values['-IN-'].strip()
+
+                    print(f'User: {user_input}')
+                    chatbot_response = self.process_user_input(user_input)
+                    print(f'Chatbot: {chatbot_response}')
+                    self.window['-IN-'].update('')  # Clear the input field after processing the input
+
+            except Exception as e:
+                print(f"An error occurred: {e}")
+             
 
         self.window.close()
 
+    
+    def load_model(self):
+        self.tokenizer = GPT2Tokenizer.from_pretrained("distilgpt2")
+        self.model = GPT2LMHeadModel.from_pretrained("distilgpt2")
 if __name__ == "__main__":
     folder_path = "sample files"
     chatbot = FileBasedChatbot(folder_path)
+    chatbot.load_model()
     chatbot.run()
