@@ -52,7 +52,7 @@ class FileBasedChatbot:
             [sg.Input(key='-IN-', size=(45, 1), enable_events=True), sg.Button('Send')],
         ]
 
-        self.window = sg.Window('File-Based Chatbot', layout,finalize=True)
+        self.window = sg.Window('File-Based Chatbot', layout)
         self.window.set_icon('icon\icons8-chat-bot-64.ico')
 
     def run(self):
