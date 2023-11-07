@@ -11,7 +11,7 @@ The File-Based Chatbot is a Python-based system that automates the process of re
 To run this project, ensure you have the following installed:
 
 - Python 3.x
-- Required Python libraries: <b>pdfplumber, python-docx, textract, spaCy,transformers</b>
+- Required Python libraries: <b>PySimpleGUI, pdfplumber,transformers </b>
 
 # License
 This project is licensed under the [MIT License](https://opensource.org/license/mit/) - see the LICENSE file for details.
