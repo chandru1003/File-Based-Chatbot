@@ -1,9 +1,9 @@
 # File-Based Chatbot: Answering Questions from Documents
- This project is designed to extract text from various file formats (PDF, DOC, DOCX) within a specified folder path and generate responses to user-input questions using natural language processing (NLP) techniques.
+ This project is designed to extract text from  PDF file within a specified folder path and generate responses to user-input questions using natural language processing (NLP) techniques.
 
 ## Overview
 The File-Based Chatbot is a Python-based system that automates the process of reading text from documents and answering user queries based on the content. The primary functionalities of this system include:
-- Text extraction from PDF, DOC, and DOCX files within a specified folder path.
+- Text extraction from PDF,files within a specified folder path.
 - Preprocessing extracted text for better understanding.
 - Building a chatbot-like interface to answer user questions based on the content of these documents.
 
