@@ -1,13 +1,13 @@
 import PySimpleGUI as sg
 import pdfplumber
 import os
-from transformers import GPT2Tokenizer, GPT2LMHeadModel
+from transformers import pipeline
 
 class FileBasedChatbot:
     def __init__(self, folder_path):
         self.folder_path = folder_path
         self.extracted_text = self.extract_text_from_pdfs()
-        self.load_model()  
+        self.summarization_pipeline = pipeline("summarization")         
         self.create_window()
 
     def extract_text_from_pdfs(self):
@@ -22,46 +22,16 @@ class FileBasedChatbot:
         extracted_text = "\n".join(extracted_texts)
         with open("extracted_text.txt", "w", encoding="utf-8") as text_file:
             text_file.write(extracted_text)
-        return extracted_text
-
-    def load_model(self):
-        self.tokenizer = GPT2Tokenizer.from_pretrained("distilgpt2")
-        self.model = GPT2LMHeadModel.from_pretrained("distilgpt2")
-
-    def generate_text_with_gpt2(self, combined_text):
-        try:
-            self.tokenizer.padding_side = 'left'       
-            if self.tokenizer.pad_token is None:
-                self.tokenizer.pad_token = self.tokenizer.eos_token        
-            encoding = self.tokenizer.encode_plus(
-                combined_text,
-                return_tensors="pt",
-                padding='max_length',  
-                truncation=True,  
-                max_length=50  
-            )
-            input_ids = encoding['input_ids']
-            attention_mask = encoding['attention_mask']
-
-            max_new_tokens = 50
-            output = self.model.generate(
-                input_ids,
-                attention_mask=attention_mask,
-                max_length=len(input_ids[0]) + max_new_tokens, 
-                pad_token_id=self.tokenizer.pad_token_id,  
-                num_return_sequences=1
-            )
-            return self.tokenizer.decode(output[0], skip_special_tokens=True)
-        except Exception as e:
-            print(f"An error occurred: {e}")
-            return "An error occurred during text generation."
+        return extracted_text   
 
 
-
+    def summarize_text(self, combined_text):
+        summary = self.summarization_pipeline(combined_text)
+        return summary[0]['summary_text']
 
     def process_user_input(self, user_input):
         matches = [sentence for sentence in self.extracted_text.split('.') if user_input.lower() in sentence.lower()]
-        return "Answer found: " + self.generate_text_with_gpt2(' '.join(matches)) if matches else "Sorry, I couldn't find an answer related to your query."
+        return "Answer found: " + self.summarize_text(' '.join(matches)) if matches else "Sorry, I couldn't find an answer related to your query."
 
     def create_window(self):
         layout = [
@@ -80,8 +50,8 @@ class FileBasedChatbot:
             elif event == 'Send':
                 user_input = values['-IN-'].strip()
                 if user_input:
-                    print(f'User: {user_input}')
                     chatbot_response = self.process_user_input(user_input)
+                    print(f'User: {user_input}')                    
                     print(f'Chatbot: {chatbot_response}')
                     self.window['-IN-'].update('')
 
