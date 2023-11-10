@@ -7,7 +7,7 @@ class FileBasedChatbot:
     def __init__(self, folder_path):
         self.folder_path = folder_path
         self.extracted_text = self.extract_text_from_pdfs()
-        self.summarization_pipeline = pipeline("summarization")         
+        self.summarization_pipeline = pipeline("summarization",model="t5-base", tokenizer="t5-base", framework="tf")         
         self.create_window()
 
     def extract_text_from_pdfs(self):
@@ -25,8 +25,9 @@ class FileBasedChatbot:
         return extracted_text   
 
 
-    def summarize_text(self, combined_text):
-        summary = self.summarization_pipeline(combined_text)
+    def summarize_text(self, combined_text):        
+        summary = self.summarization_pipeline(combined_text, max_length=60, min_length=30, do_sample=False)
+
         return summary[0]['summary_text']
 
     def process_user_input(self, user_input):
