@@ -2,26 +2,40 @@ import PySimpleGUI as sg
 import pdfplumber
 import os
 from transformers import pipeline
+from docx import Document
 
 class FileBasedChatbot:
     def __init__(self, folder_path):
         self.folder_path = folder_path
-        self.extracted_text = self.extract_text_from_pdfs()
+        self.extracted_text = self.extract_text_from_documents()
         self.summarization_pipeline = pipeline("summarization",model="t5-base", tokenizer="t5-base", framework="tf")         
         self.create_window()
 
-    def extract_text_from_pdfs(self):
+    def extract_text_from_documents(self):
         extracted_texts = []
+
         for filename in os.listdir(self.folder_path):
+            file_path = os.path.join(self.folder_path, filename)
+
             if filename.endswith(".pdf"):
-                with pdfplumber.open(os.path.join(self.folder_path, filename)) as pdf:
+                with pdfplumber.open(file_path) as pdf:
                     for page in pdf.pages:
                         text = page.extract_text()
-                        if text:  
+                        if text:
                             extracted_texts.append(text)
+
+            elif filename.endswith((".doc", ".docx")):
+                doc = Document(file_path)
+                paragraphs = [paragraph.text for paragraph in doc.paragraphs]
+                text = "\n".join(paragraphs)
+                if text:
+                    extracted_texts.append(text)
+
         extracted_text = "\n".join(extracted_texts)
+
         with open("extracted_text.txt", "w", encoding="utf-8") as text_file:
             text_file.write(extracted_text)
+
         return extracted_text   
 
 
