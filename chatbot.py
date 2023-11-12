@@ -1,15 +1,15 @@
 import PySimpleGUI as sg
 import pdfplumber
 import os
-from transformers import pipeline
+from transformers import pipeline, T5Tokenizer
 from docx import Document
 
 class FileBasedChatbot:
-    def __init__(self, folder_path):
-        self.folder_path = folder_path
-        self.extracted_text = self.extract_text_from_documents()
-        self.summarization_pipeline = pipeline("summarization",model="t5-base", tokenizer="t5-base", framework="tf")         
+    def __init__(self):
+        self.folder_path = ""
         self.create_window()
+        self.summarization_pipeline = pipeline("summarization", model="t5-base", tokenizer=T5Tokenizer.from_pretrained("t5-base", model_max_length=1024), framework="tf")         
+        
 
     def extract_text_from_documents(self):
         extracted_texts = []
@@ -40,8 +40,7 @@ class FileBasedChatbot:
 
 
     def summarize_text(self, combined_text):        
-        summary = self.summarization_pipeline(combined_text, max_length=60, min_length=30, do_sample=False)
-
+        summary = self.summarization_pipeline(combined_text, max_length=100, min_length=60, do_sample=False)
         return summary[0]['summary_text']
 
     def process_user_input(self, user_input):
@@ -51,6 +50,7 @@ class FileBasedChatbot:
     def create_window(self):
         layout = [
             [sg.Text('File-Based Chatbot', font='Any 15')],
+            [sg.Text('Folder Path:'), sg.Input(key='-FOLDER_PATH-', size=(50, 1)), sg.FolderBrowse()],
             [sg.Output(size=(80, 30), key='-OUTPUT-')],
             [sg.Input(key='-IN-', size=(70, 1)), sg.Button('Send', bind_return_key=True)]
         ]
@@ -64,7 +64,9 @@ class FileBasedChatbot:
                 break
             elif event == 'Send':
                 user_input = values['-IN-'].strip()
-                if user_input:
+                self.folder_path = values['-FOLDER_PATH-']
+                if user_input and self.folder_path:
+                    self.extracted_text = self.extract_text_from_documents()
                     chatbot_response = self.process_user_input(user_input)
                     print(f'User: {user_input}')                    
                     print(f'Chatbot: {chatbot_response}')
@@ -73,6 +75,12 @@ class FileBasedChatbot:
         self.window.close()
 
 if __name__ == "__main__":
-    folder_path = "sample files"
-    chatbot = FileBasedChatbot(folder_path)
+    chatbot = FileBasedChatbot()
     chatbot.run()
+#This modification includes a new input field ('-FOLDER_PATH-') for the folder path, and the folder path is updated dynamically based on the user's input.
+
+
+
+
+
+
