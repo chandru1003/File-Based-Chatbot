@@ -1,15 +1,29 @@
 import PySimpleGUI as sg
 import pdfplumber
 import os
-from transformers import pipeline, T5Tokenizer
+from transformers import pipeline, AutoModel, AutoTokenizer
 from docx import Document
+import subprocess
 
+# Clone the GitHub repository
+repo_url = "https://github.com/patil-suraj/question_generation.git"
+clone_folder = "question_generation"
+if not os.path.exists(clone_folder):
+    subprocess.run(["git", "clone", repo_url, clone_folder])
+
+import sys
+sys.path.append(clone_folder)
+
+from pipelines import pipeline
 class FileBasedChatbot:
     def __init__(self):
         self.folder_path = ""
         self.create_window()
-        self.summarization_pipeline = pipeline("summarization", model="t5-base", tokenizer=T5Tokenizer.from_pretrained("t5-base", model_max_length=1024), framework="tf")         
-        
+        self.model_name = "valhalla/t5-base-qg-hl"
+        self.model = AutoModel.from_pretrained(self.model_name)
+        self.tokenizer = AutoTokenizer.from_pretrained(self.model_name)        
+        self.question_answering_pipeline = pipeline("question-generation", model=self.model_name)
+      
 
     def extract_text_from_documents(self):
         extracted_texts = []
@@ -31,21 +45,20 @@ class FileBasedChatbot:
                 if text:
                     extracted_texts.append(text)
 
-        extracted_text = "\n".join(extracted_texts)
+        extracted_text = "\n".join(extracted_texts)   
 
-        with open("extracted_text.txt", "w", encoding="utf-8") as text_file:
-            text_file.write(extracted_text)
-
-        return extracted_text   
-
-
-    def summarize_text(self, combined_text):        
+    '''def summarize_text(self, combined_text):        
         summary = self.summarization_pipeline(combined_text, max_length=100, min_length=60, do_sample=False)
-        return summary[0]['summary_text']
+        return summary[0]['summary_text']'''
 
+  
     def process_user_input(self, user_input):
-        matches = [sentence for sentence in self.extracted_text.split('.') if user_input.lower() in sentence.lower()]
-        return "Answer found: " + self.summarize_text(' '.join(matches)) if matches else "Sorry, I couldn't find an answer related to your query."
+        answer = self.question_answering_pipeline(question=user_input, context=self.extracted_text)
+   
+        if answer['score'] > 0.5:
+            return f"Answer found: {answer['answer']}"
+        else:
+            return "Sorry, I couldn't find an answer related to your query."
 
     def create_window(self):
         layout = [
@@ -77,7 +90,7 @@ class FileBasedChatbot:
 if __name__ == "__main__":
     chatbot = FileBasedChatbot()
     chatbot.run()
-#This modification includes a new input field ('-FOLDER_PATH-') for the folder path, and the folder path is updated dynamically based on the user's input.
+
 
 
 
