@@ -8,8 +8,8 @@ class FileBasedChatbot:
     def __init__(self):
         self.folder_path = ""
         self.create_window()
-        self.summarization_pipeline = pipeline("summarization", model="t5-base", tokenizer=T5Tokenizer.from_pretrained("t5-base", model_max_length=1024), framework="tf")         
-        
+        self.summarization_pipeline = pipeline("summarization", model="t5-base", tokenizer=T5Tokenizer.from_pretrained("t5-base", model_max_length=1024), framework="tf")
+        self.qa_pipeline = pipeline("question-answering")  
 
     def extract_text_from_documents(self):
         extracted_texts = []
@@ -44,8 +44,13 @@ class FileBasedChatbot:
         return summary[0]['summary_text']
 
     def process_user_input(self, user_input):
-        matches = [sentence for sentence in self.extracted_text.split('.') if user_input.lower() in sentence.lower()]
-        return "Answer found: " + self.summarize_text(' '.join(matches)) if matches else "Sorry, I couldn't find an answer related to your query."
+        answer = self.qa_pipeline(question=user_input, context=self.extracted_text)
+
+        if answer['score'] > 0.5:
+            return f"Answer found: {answer['answer']}"
+        else:
+            matches = [sentence for sentence in self.extracted_text.split('.') if user_input.lower() in sentence.lower()]
+            return "Answer found: " + self.summarize_text(' '.join(matches)) if matches else "Sorry, I couldn't find an answer related to your query."
 
     def create_window(self):
         layout = [
@@ -57,22 +62,24 @@ class FileBasedChatbot:
         self.window = sg.Window('File-Based Chatbot', layout, finalize=True)
         self.window.set_icon('icon\icons8-chat-bot-64.ico')
 
-    def run(self):
+    def run(self):    
         while True:
             event, values = self.window.read()
             if event in (sg.WIN_CLOSED, 'Exit'):
                 break
             elif event == 'Send':
                 user_input = values['-IN-'].strip()
-                self.folder_path = values['-FOLDER_PATH-']
-                if user_input and self.folder_path:
+                new_folder_path = values['-FOLDER_PATH-']
+
+                if new_folder_path:
+                    self.folder_path = new_folder_path                    
                     self.extracted_text = self.extract_text_from_documents()
+
+                if user_input and self.folder_path:
                     chatbot_response = self.process_user_input(user_input)
-                    print(f'User: {user_input}')                    
+                    print(f'User: {user_input}')
                     print(f'Chatbot: {chatbot_response}')
                     self.window['-IN-'].update('')
-
-        self.window.close()
 
 if __name__ == "__main__":
     chatbot = FileBasedChatbot()
