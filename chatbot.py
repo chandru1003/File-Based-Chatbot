@@ -31,10 +31,7 @@ class FileBasedChatbot:
                 if text:
                     extracted_texts.append(text)
 
-        extracted_text = "\n".join(extracted_texts)
-
-        with open("extracted_text.txt", "w", encoding="utf-8") as text_file:
-            text_file.write(extracted_text)
+        extracted_text = "\n".join(extracted_texts)      
 
         return extracted_text   
 
