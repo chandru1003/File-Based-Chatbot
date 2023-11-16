@@ -6,7 +6,7 @@ from docx import Document
 
 class FileBasedChatbot:
     def __init__(self):
-        self.folder_path = ""
+        self.folder_path = ""        
         self.create_window()
         self.summarization_pipeline = pipeline("summarization", model="t5-base", tokenizer=T5Tokenizer.from_pretrained("t5-base", model_max_length=1024), framework="tf")
         self.qa_pipeline = pipeline("question-answering", model=qa_model_path, tokenizer=qa_model_path)  
@@ -82,4 +82,5 @@ class FileBasedChatbot:
 
 if __name__ == "__main__":
     chatbot = FileBasedChatbot()
+    qa_model_path = "fine_tune_qa_model.py" 
     chatbot.run()
