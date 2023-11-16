@@ -9,7 +9,7 @@ class FileBasedChatbot:
         self.folder_path = ""
         self.create_window()
         self.summarization_pipeline = pipeline("summarization", model="t5-base", tokenizer=T5Tokenizer.from_pretrained("t5-base", model_max_length=1024), framework="tf")
-        self.qa_pipeline = pipeline("question-answering")  
+        self.qa_pipeline = pipeline("question-answering", model=qa_model_path, tokenizer=qa_model_path)  
 
     def extract_text_from_documents(self):
         extracted_texts = []
@@ -31,7 +31,9 @@ class FileBasedChatbot:
                 if text:
                     extracted_texts.append(text)
 
-        extracted_text = "\n".join(extracted_texts)      
+        extracted_text = "\n".join(extracted_texts)  
+        with open("extracted_text.txt", "w", encoding="utf-8") as text_file:
+            text_file.write(extracted_text)   
 
         return extracted_text   
 
