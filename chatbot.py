@@ -7,10 +7,11 @@ from docx import Document
 class FileBasedChatbot:
     def __init__(self):
         self.folder_path = ""        
+        self.extracted_text = ""
         self.create_window()
         self.summarization_pipeline = pipeline("summarization", model="t5-base", tokenizer=T5Tokenizer.from_pretrained("t5-base", model_max_length=1024), framework="tf")
-        self.qa_pipeline = pipeline("question-answering", model=qa_model_path, tokenizer=qa_model_path)  
-
+        self.qa_pipeline = pipeline("question-answering", model="my_awesome_qa_model") 
+        
     def extract_text_from_documents(self):
         extracted_texts = []
 
@@ -35,14 +36,16 @@ class FileBasedChatbot:
         with open("extracted_text.txt", "w", encoding="utf-8") as text_file:
             text_file.write(extracted_text)   
 
-        return extracted_text   
-
+        return extracted_text
 
     def summarize_text(self, combined_text):        
         summary = self.summarization_pipeline(combined_text, max_length=100, min_length=60, do_sample=False)
         return summary[0]['summary_text']
 
     def process_user_input(self, user_input):
+        if not self.extracted_text:
+            return "Please select a folder with documents first."
+
         answer = self.qa_pipeline(question=user_input, context=self.extracted_text)
 
         if answer['score'] > 0.5:
@@ -74,13 +77,11 @@ class FileBasedChatbot:
                     self.folder_path = new_folder_path                    
                     self.extracted_text = self.extract_text_from_documents()
 
-                if user_input and self.folder_path:
-                    chatbot_response = self.process_user_input(user_input)
-                    print(f'User: {user_input}')
-                    print(f'Chatbot: {chatbot_response}')
-                    self.window['-IN-'].update('')
+                chatbot_response = self.process_user_input(user_input)
+                print(f'User: {user_input}')
+                print(f'Chatbot: {chatbot_response}')
+                self.window['-IN-'].update('')
 
 if __name__ == "__main__":
-    chatbot = FileBasedChatbot()
-    qa_model_path = "fine_tune_qa_model.py" 
+    chatbot = FileBasedChatbot()     
     chatbot.run()
