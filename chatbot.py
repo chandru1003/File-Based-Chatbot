@@ -1,16 +1,17 @@
-import PySimpleGUI as sg
-import pdfplumber
 import os
-from transformers import pipeline, T5Tokenizer
+import pdfplumber
 from docx import Document
+import PySimpleGUI as sg
+from transformers import pipeline, T5Tokenizer
 
 class FileBasedChatbot:
     def __init__(self):
-        self.folder_path = ""        
+        self.folder_path = ""
         self.extracted_text = ""
         self.create_window()
         self.summarization_pipeline = pipeline("summarization", model="t5-base", tokenizer=T5Tokenizer.from_pretrained("t5-base", model_max_length=1024), framework="tf")
-        self.qa_pipeline = pipeline("question-answering", model="my_awesome_qa_model") 
+        self.qa_pipeline = pipeline("question-answering", model="Falconsai/question_answering")  
+         
         
     def extract_text_from_documents(self):
         extracted_texts = []
@@ -32,13 +33,13 @@ class FileBasedChatbot:
                 if text:
                     extracted_texts.append(text)
 
-        extracted_text = "\n".join(extracted_texts)  
+        extracted_text = "\n".join(extracted_texts)
         with open("extracted_text.txt", "w", encoding="utf-8") as text_file:
-            text_file.write(extracted_text)   
+            text_file.write(extracted_text)
 
-        return extracted_text
+        return extracted_text  
 
-    def summarize_text(self, combined_text):        
+    def summarize_text(self, combined_text):
         summary = self.summarization_pipeline(combined_text, max_length=100, min_length=60, do_sample=False)
         return summary[0]['summary_text']
 

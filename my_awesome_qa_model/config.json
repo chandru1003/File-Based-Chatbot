@@ -1,5 +1,5 @@
 {
-  "_name_or_path": "distilbert-base-uncased",
+  "_name_or_path": "my_awesome_qa_model",
   "activation": "gelu",
   "architectures": [
     "DistilBertForQuestionAnswering"
