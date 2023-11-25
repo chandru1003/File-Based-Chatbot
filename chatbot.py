@@ -75,7 +75,7 @@ class FileBasedChatbot:
         result = self.search(df, user_input, n=3)
         data = result['results']
         sources = result['sources']
-        system_role = """You are a AI assistant whose expertise is reading and summarizing scientific papers. You are given a query, 
+        system_role = """You are a AI assistant whose expertise is reading and summarizing doc anf pdf. You are given a query, 
         a series of text embeddings and the title from a paper in order of their cosine similarity to the query. 
         You must take the given embeddings and return a very detailed summary of the paper in the languange of the query:
         """
@@ -97,7 +97,7 @@ class FileBasedChatbot:
 
     def gpt(self, context, source):
         print('Sending request to OpenAI')
-        openai.api_key = os.getenv('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')
+        openai.api_key = os.getenv('apikey')
         r = openai.ChatCompletion.create(model="gpt-3.5-turbo", messages=context)
         answer = r.choices[0]["message"]["content"]
         print('Done sending request to OpenAI')
