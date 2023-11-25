@@ -97,7 +97,7 @@ class FileBasedChatbot:
 
     def gpt(self, context, source):
         print('Sending request to OpenAI')
-        openai.api_key = os.getenv('apikey')
+        #openai.api_key = os.getenv('apikey')
         r = openai.ChatCompletion.create(model="gpt-3.5-turbo", messages=context)
         answer = r.choices[0]["message"]["content"]
         print('Done sending request to OpenAI')
