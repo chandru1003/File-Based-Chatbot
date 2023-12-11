@@ -1,8 +1,8 @@
 import os
+import time
 import pdfplumber
 from docx import Document
 import PySimpleGUI as sg
-from transformers import pipeline, T5Tokenizer
 import openai
 import pandas as pd
 from scipy.spatial.distance import cosine
@@ -50,11 +50,6 @@ class FileBasedChatbot:
 
         return extracted_text
 
-    def summarize_text(self, combined_text):
-        summarization_pipeline = pipeline("summarization", model="t5-base", tokenizer=T5Tokenizer.from_pretrained("t5-base", model_max_length=1024), framework="tf")
-        summary = summarization_pipeline(combined_text, max_length=100, min_length=60, do_sample=False)
-        return summary[0]['summary_text']
-
     def search(self, df, query, n=3, pprint=True):
         query_embedding = get_embedding(query, engine="text-embedding-ada-002")
         df["similarity"] = df.embeddings.apply(lambda x: cosine(x, query_embedding))
@@ -72,10 +67,7 @@ class FileBasedChatbot:
         result = self.search(df, user_input, n=3)
         data = result['results']
         sources = result['sources']
-        system_role = """You are an AI assistant with expertise in reading and summarizing documents (doc and pdf). You are given a query, 
-        a series of text embeddings, and the title from a document in order of their cosine similarity to the query. 
-        Your task is to provide a detailed summary of the document in the language of the query:
-        """
+        system_role = """Find answer for  given a query"""
 
         user_input = user_input + """
         Here are the embeddings:
@@ -93,6 +85,7 @@ class FileBasedChatbot:
 
     def gpt(self, context, source):
         print('Sending request to OpenAI')
+        time.sleep(20)
         #openai.api_key = os.getenv('')
         r = openai.ChatCompletion.create(model="gpt-3.5-turbo", messages=context)
         answer = r.choices[0]["message"]["content"]
@@ -130,7 +123,8 @@ class FileBasedChatbot:
 
     def embeddings(self, df):
         print("Calculating embeddings")
-       #openai.api_key = ""
+        time.sleep(20)
+        #openai.api_key = ""
         embedding_model = "text-embedding-ada-002"
         embeddings = df.text.apply(lambda x: get_embedding(x, engine=embedding_model))
         df["embeddings"] = embeddings
