@@ -5,8 +5,7 @@ from docx import Document
 import PySimpleGUI as sg
 import openai
 import pandas as pd
-from scipy.spatial.distance import cosine
-from openai.embeddings_utils import get_embedding
+
 
 class FileBasedChatbot:
     def __init__(self):
@@ -30,19 +29,12 @@ class FileBasedChatbot:
         for filename in os.listdir(self.folder_path):
             file_path = os.path.join(self.folder_path, filename)
 
-            if filename.endswith(".pdf"):
+            if filename.endswith((".pdf", ".doc", ".docx")):
                 with pdfplumber.open(file_path) as pdf:
                     for page in pdf.pages:
                         text = page.extract_text()
                         if text:
                             extracted_texts.append(text)
-
-            elif filename.endswith((".doc", ".docx")):
-                doc = Document(file_path)
-                paragraphs = [paragraph.text for paragraph in doc.paragraphs]
-                text = "\n".join(paragraphs)
-                if text:
-                    extracted_texts.append(text)
 
         extracted_text = "\n".join(extracted_texts)
         with open("extracted_text.txt", "w", encoding="utf-8") as text_file:
@@ -50,62 +42,94 @@ class FileBasedChatbot:
 
         return extracted_text
 
-    def search(self, df, query, n=3, pprint=True):
-        query_embedding = get_embedding(query, engine="text-embedding-ada-002")
-        df["similarity"] = df.embeddings.apply(lambda x: cosine(x, query_embedding))
-
+    def search_for_answer(self, df, query, n=3):
+        df["similarity"] = df.text.apply(lambda x: self.calculate_similarity(x, query))
         results = df.sort_values("similarity", ascending=False, ignore_index=True)
-        results = results.head(n)
+
+        # Ensure that the number of results is not greater than the length of the DataFrame
+        num_results = min(n, len(results))
+    
         sources = [{"Page " + str(results.iloc[i]["page"]): results.iloc[i]["text"][:150] + "..."}
-                   for i in range(n)]
+            for i in range(num_results)]
+    
         return {"results": results, "sources": sources}
 
+    def calculate_similarity(self, text, query):
+        # You can use a similarity metric here (e.g., cosine similarity)
+        # For simplicity, let's just compare the length of the common words
+        common_words = set(text.split()) & set(query.split())
+        similarity = len(common_words) / max(len(set(text.split())), len(set(query.split())))
+        return similarity
+
     def create_prompt(self, df, user_input):
-        print('Creating prompt')
+       # print('Creating prompt')
         print(user_input)
 
-        result = self.search(df, user_input, n=3)
+        result = self.search_for_answer(df, user_input, n=3)
         data = result['results']
         sources = result['sources']
-        system_role = """Find answer for  given a query"""
+        system_role = """Find an answer for the given query"""
 
-        user_input = user_input + """
-        Here are the embeddings:
+        user_input_lines = [user_input, "Here are the potential answers:"]
 
-        1. {}\n2. {}\n3. {}
-        """.format(data.iloc[0]['text'], data.iloc[1]['text'], data.iloc[2]['text'])
+        # Check if there are enough rows in the DataFrame before accessing specific indices
+        if len(data) > 0:
+            user_input_lines.append(f"1. {data.iloc[0]['text']}")
+
+        if len(data) > 1:
+            user_input_lines.append(f"2. {data.iloc[1]['text']}")
+
+        if len(data) > 2:
+            user_input_lines.append(f"3. {data.iloc[2]['text']}")
+
+        user_input = "\n".join(user_input_lines)
 
         history = [
             {"role": "system", "content": system_role},
-            {"role": "user", "content": str(user_input)}
+            {"role": "user", "content": user_input}
         ]
 
-        print('Done creating prompt')
+       # print('Done creating prompt')
         return {'messages': history, 'sources': sources}
 
+
     def gpt(self, context, source):
-        print('Sending request to OpenAI')
+        #print('Sending request to OpenAI')
         time.sleep(20)
-        #openai.api_key = os.getenv('')
-        r = openai.ChatCompletion.create(model="gpt-3.5-turbo", messages=context)
-        answer = r.choices[0]["message"]["content"]
-        print('Done sending request to OpenAI')
-        response = {'answer': answer, 'sources': source}
-        return response
+        
+        #openai.api_key = '<api_key>'
+        
+        try:
+            response = openai.ChatCompletion.create(
+                model="gpt-3.5-turbo",
+                messages=context,
+                source=source,
+                log_level="info"  # Request log information
+            )
+
+            # Extract the token usage from the API response
+            usage = response['usage']['total_tokens']
+            #print(f'Tokens used: {usage}')
+
+            answer = response.choices[0]["message"]["content"]
+            #print('Done sending request to OpenAI')
+            return {'answer': answer, 'sources': source, 'tokens_used': usage}
+
+        except openai.error.OpenAIError as e:
+            print(f'Error from OpenAI: {e}')
+            return {'error': str(e)}
+
 
     def create_df(self, data):
         if type(data) == list:
-            print("Extracting text from pdf")
-            print("Creating dataframe")
-            filtered_pdf = [row for row in data if len(row["text"]) >= 30]
-            df = pd.DataFrame(filtered_pdf)
+            #print("Creating dataframe")
+            df = pd.DataFrame(data, columns=["text"])
             df["page"] = range(1, len(df) + 1)
-            df = df.drop_duplicates(subset=["text", "page"], keep="first")
-            print("Done creating dataframe")
+            df = df[df["text"].apply(lambda x: len(x) >= 30)].drop_duplicates(subset=["text", "page"], keep="first")
+            #print("Done creating dataframe")
 
         elif type(data) == str:
-            print("Extracting text from txt")
-            print("Creating dataframe")
+            #print("Creating dataframe")
             df = pd.DataFrame(data.split("\n"), columns=["text"])
 
         return df
@@ -116,19 +140,23 @@ class FileBasedChatbot:
 
         documents = [{"text": self.extracted_text}]
         df = self.create_df(documents)
-        self.embeddings(df)
 
-        response = self.gpt(context=self.create_prompt(df, user_input))
-        return f"Answer found: {response['answer']}"
+        prompt_response = self.create_prompt(df, user_input)
+        context = prompt_response['messages']
+        source = prompt_response['sources']
 
-    def embeddings(self, df):
-        print("Calculating embeddings")
-        time.sleep(20)
-        #openai.api_key = ""
-        embedding_model = "text-embedding-ada-002"
-        embeddings = df.text.apply(lambda x: get_embedding(x, engine=embedding_model))
-        df["embeddings"] = embeddings
-        print("Done calculating embeddings")
+        # Call OpenAI API
+        response = self.gpt(context=context, source=source)
+
+        if 'error' in response:
+            # Handle API error
+            return f"Error from OpenAI: {response['error']}"
+        elif 'answer' in response:
+            # Display the answer
+            return f"Answer found: {response['answer']}"
+        else:
+            # Unexpected response format
+            return "Unexpected response from OpenAI."
 
     def run(self):
         while True:
