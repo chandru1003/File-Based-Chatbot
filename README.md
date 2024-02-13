@@ -1,24 +1,18 @@
 # File-Based Chatbot: Answering Questions from Documents
- This project is designed to extract text from both PDF and docx files within a specified folder path and generate responses to user-input questions using natural language processing (NLP) techniques.
+This is a file-based chatbot application that utilizes the Gemini model for generating responses to user queries based on text extracted from documents (PDF, DOC, DOCX).
 
 ## Overview
-<p>This is a simple File-Based Chatbot built using Python and various libraries such as PySimpleGUI, pdfplumber, transformers, and docx. The chatbot analyzes text data extracted from PDFs and Word documents in a specified folder and responds to user queries.</p>
+This File-Based Chatbot is a Python application leveraging various libraries, including PySimpleGUI, pdfplumber, google-generativeai, and python-docx. The chatbot analyzes text data extracted from PDFs and Word documents in a specified folder and responds to user queries.
 
 ## Features
 - Extracts text data from PDF and Word documents.
-- Summarizes extracted text using the T5 transformer model.
-- Provides answers to user questions using the Question-Answering (QA) transformer model.
+- Utilizes the Gemini model for generating responses.
+- Simple and user-friendly interface using PySimpleGUI.
+- Supports a wide range of document formats.
 
-## Requirements
-To run this project, ensure you have the following installed:
+## Gemini Model
+The chatbot uses the Gemini model, powered by Google's GenerativeAI platform, to generate responses based on the extracted text and user queries. The Gemini model is a powerful language model capable of understanding and generating natural language responses
 
-- Python 3.x
-- Required Python libraries: <b>PySimpleGUI, pdfplumber,python-docx,transformers </b>
-
-## Notes
-- The summarization model uses the T5 transformer with a predefined configuration.
-- The question-answering model is a pretrained model from the Hugging Face transformers library.
-- The chatbot considers the context of the extracted text for both summarization and question-answering.
 
 # License
 This project is licensed under the [MIT License](https://opensource.org/license/mit/) - see the LICENSE file for details.
